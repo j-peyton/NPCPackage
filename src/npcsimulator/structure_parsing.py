@@ -1,5 +1,5 @@
 import numpy as np
-from templates import gen_dimer, gen_poly
+from .templates import gen_dimer, gen_poly
 
 
 def parse_custom(x_structures, y_structures):
