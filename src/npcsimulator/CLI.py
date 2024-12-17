@@ -2,13 +2,12 @@ import argparse
 from pathlib import Path
 import importlib.util
 
-from centroids import generate_centroids, read_centroids, get_range
-from structure_parsing import parse_structures
-from emitters import dist_custom
-from noise import gen_noise
-from conversion import convert_3d
-from plot import plot_components_in3d
-from save import save_data
+from .centroids import generate_centroids, read_centroids, get_range
+from .structure_parsing import parse_structures
+from .emitters import dist_custom, gen_noise
+from .conversion import convert_3d
+from .plot import plot_components_in3d
+from .save import save_data
 
 def load_custom_function(filepath):
     """Load a custom membrane function from a file."""
