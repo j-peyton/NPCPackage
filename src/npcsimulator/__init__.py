@@ -1,4 +1,4 @@
-__version__ = "0.1.7"
+__version__ = "1.0.0"
 
 from .centroids import read_centroids, generate_centroids
 from .templates import gen_dimer, gen_poly, gen_preset

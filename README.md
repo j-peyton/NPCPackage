@@ -37,7 +37,7 @@ pip install npcsimulator
 ```
 or if preferred, install from the source distribution:
 ```bash
-git clone https://github.com/j-peyton/NPCSimulator.git
+git clone https://github.com/j-peyton/NPCPackage.git
 cd .../npcsimulator
 ```
 
@@ -50,7 +50,7 @@ cd .../npcsimulator
 Following installation, import and run functions directly in your IDE:
 
 ```python
-from simulator import generate_centroids
+from npcsimulator.centroids import generate_centroids
 
 xrange = (-100, 100)
 yrange = (-100, 100)
