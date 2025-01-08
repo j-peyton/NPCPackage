@@ -3,7 +3,32 @@
 
 # Ignore PyCharm project files
 .idea/
+.idea
 
 # Ignore Python bytecode and cache files
 __pycache__/
 *.pyc
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
