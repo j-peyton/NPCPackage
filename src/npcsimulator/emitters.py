@@ -39,10 +39,10 @@ def dist_custom(centroids, Pe, Pf, radius, structures, abundances, gt_uncertaint
     :param measured: Poisson mean of the number of measurements per emitter.
     :param ms_uncertainty: Uncertainty of measurements around an emitter as a percentage of the radius.
 
-    :return: Numpy arrays of labelled emitters, unlabelled emitters, all measurements, observed and unobserved measurements.
+    :return: Numpy arrays of labelled emitters, unlabelled emitters, and measurements.
     """
     labelled_emitters, unlabelled_emitters = [], []
-    all_measurements, observed_measurements, unobserved_measurements = [], [], []
+    observed = []
 
     # Normalize abundance values
     abundances = np.array(abundances) / np.sum(abundances)
@@ -73,16 +73,15 @@ def dist_custom(centroids, Pe, Pf, radius, structures, abundances, gt_uncertaint
                 measurements = generate_measurements(corrected_point, poisson_mean=measured,
                                                      uncertainty_std=ms_uncertainty*radius)
                 for measurement in measurements:
-                    all_measurements.append(measurement)
                     if np.random.binomial(1, Pf):  # Signal received check
-                        observed_measurements.append(measurement)
+                        observed.append(measurement)
                     else:
-                        unobserved_measurements.append(measurement)
+                        continue
             else:
                 unlabelled_emitters.append(corrected_point)
 
     return (np.array(labelled_emitters), np.array(unlabelled_emitters),
-            np.array(observed_measurements), np.array(unobserved_measurements))
+            np.array(observed))
 
 
 

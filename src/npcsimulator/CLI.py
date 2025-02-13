@@ -89,8 +89,8 @@ def cli():
             structure_abundance=args.structure_abundances
         )
 
-    (labelled_emits, unlabelled_emits, observed_measurements,
-         unobserved_measurements) = dist_custom(
+    (labelled_emits, unlabelled_emits, observed_measurements)\
+        = dist_custom(
             centroids, args.Pe, args.Pf, radius=args.radius, gt_uncertainty=args.gt_uncertainty,
         measured=args.measured, ms_uncertainty=args.ms_uncertainty, structures=all_structures,
         abundances=abundances
@@ -102,24 +102,23 @@ def cli():
     if args.membrane:
         membrane_path = Path(args.membrane).resolve()
         membrane_function = load_custom_function(membrane_path)
-        array_list = [centroids, labelled_emits, unlabelled_emits, observed_measurements,
-                      unobserved_measurements, noise_emits]
+        array_list = [centroids, labelled_emits, unlabelled_emits, observed_measurements, noise_emits]
         array_list = convert_3d(array_list, membrane_function)
         (centroids, labelled_emits, unlabelled_emits, observed_measurements,
-         unobserved_measurements, noise_emits) = array_list
+         noise_emits) = array_list
 
     else:
         (centroids, labelled_emits, unlabelled_emits, observed_measurements,
-         unobserved_measurements, noise_emits) = (centroids, labelled_emits, unlabelled_emits, observed_measurements,
-                      unobserved_measurements, noise_emits)
+         noise_emits) = (centroids, labelled_emits, unlabelled_emits, observed_measurements,
+                                                  noise_emits)
 
     plot_components_in3d(centroids=centroids, labelled_emitters=labelled_emits,
                          unlabelled_emitters=unlabelled_emits, observed_measurements=observed_measurements,
-                         unobserved_measurements=unobserved_measurements, noise=noise_emits)
+                         noise=noise_emits)
 
     if args.output:
         save_data(args.output, labelled_emits, unlabelled_emits, observed_measurements,
-                  unobserved_measurements, noise_emits)
+                  noise_emits)
     else:
         print("No output specified; data not saved")
 
