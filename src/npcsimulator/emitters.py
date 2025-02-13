@@ -85,20 +85,19 @@ def dist_custom(centroids, Pe, Pf, radius, structures, abundances, gt_uncertaint
 
 
 
-def gen_noise(xrange, yrange, noise_density, measured=5, ms_uncertainty=0.5):
+def gen_noise(xrange, yrange, rho, measured=5, ms_uncertainty=0.5):
     """
     Generates random noise emitters across the specified window area (2D or 3D).
 
     :param xrange: Tuple specifying the (min, max) x-coordinate bounds for the window.
     :param yrange: Tuple specifying the (min, max) y-coordinate bounds for the window.
-    :param noise_density: Average number of noise emitters per unit area (for 2D) or volume (for 3D).
+    :param rho: Poisson mean of number of noise clusters to be generated.
     :param measured: Poisson mean of number of measurements around noise emitter.
     :param ms_uncertainty: Uncertainty of measurement position around the noise emitter.
 
     :return: Array of noise emitter coordinates (2D or 3D).
     """
-    area = (xrange[1] - xrange[0]) * (yrange[1] - yrange[0])
-    n_noise_emitters = np.random.poisson(noise_density * area)
+    n_noise_emitters = np.random.poisson(rho)
 
     # Generate the 2D noise for x and y coordinates
     x_noise = np.random.uniform(xrange[0], xrange[1], n_noise_emitters)
