@@ -30,7 +30,7 @@ def save_data(filename, true_emitters, unlabelled_emitters, observed_measurement
 
         # Prepare noise emitters data
         noise_data = np.column_stack((noise_emitters
-                                      ,np.full(noise_emitters.shape[0], 'noise')))
+                                      ,np.full(noise_emitters.shape[0], 'clutter')))
 
         # Combine all data into a single array
         all_data = np.vstack((ground_truth, measurement_data, noise_data))
@@ -49,7 +49,7 @@ def save_data(filename, true_emitters, unlabelled_emitters, observed_measurement
             hf.create_dataset('true_emitters', data=true_emitters)
             hf.create_dataset('unlabelled_emitters', data=unlabelled_emitters)
             hf.create_dataset('observed_measurements', data=observed_measurements)
-            hf.create_dataset('noise_emitters', data=noise_emitters)
+            hf.create_dataset('clutter', data=noise_emitters)
         print(f"Data saved to {filename}")
 
     else:

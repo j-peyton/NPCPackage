@@ -70,7 +70,7 @@ def plot_components_in3d(centroids, labelled_emitters, unlabelled_emitters,
            z=noise[:, 2] if is_3d else np.zeros_like(noise[:, 0]),
            mode='markers',
            marker=dict(size=3, color='yellow', opacity=0.4),
-           name='Noise'
+           name='Clutter'
        ))
 
     # Set layout for 3D/2D plots
@@ -213,7 +213,7 @@ def plot_components_scale(centroids, labelled_emitters, unlabelled_emitters,
                 y=noise[:, 1],
                 mode='markers',
                 marker=dict(size=3, color=noise[:, 2], colorscale='YlGnBu', colorbar=dict(title="Z Value")),
-                name='Noise'
+                name='Clutter'
             ))
         else:
             fig.add_trace(go.Scatter(
@@ -221,7 +221,7 @@ def plot_components_scale(centroids, labelled_emitters, unlabelled_emitters,
                 y=noise[:, 1],
                 mode='markers',
                 marker=dict(size=3, color='yellow', opacity=0.4),
-                name='Noise'
+                name='Clutter'
             ))
 
     # Ensure square aspect ratio by using scaleanchor
