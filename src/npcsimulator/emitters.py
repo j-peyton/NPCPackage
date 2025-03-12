@@ -27,7 +27,7 @@ def generate_measurements(emitter_position, poisson_mean, uncertainty_std):
 def dist_custom(centroids, Pe, Pf, radius, structures, abundances, gt_uncertainty=0,
                 measured=7, ms_uncertainty=0.05):
     """
-    Distributes emitters with user-provided structures, applying a membrane function if provided.
+    Distributes emitters with user-provided structures and records emitter adjacency information.
 
     :param centroids: List of centroid coordinates.
     :param Pe: Probability of emitter presence.
@@ -39,10 +39,11 @@ def dist_custom(centroids, Pe, Pf, radius, structures, abundances, gt_uncertaint
     :param measured: Poisson mean of the number of measurements per emitter.
     :param ms_uncertainty: Uncertainty of measurements around an emitter as a percentage of the radius.
 
-    :return: Numpy arrays of labelled emitters, unlabelled emitters, and measurements.
+    :return: Numpy arrays of labelled emitters, unlabelled emitters, measurements, and adjacency list.
     """
     labelled_emitters, unlabelled_emitters = [], []
     observed = []
+    edges = []  # Store emitter adjacency pairs
 
     # Normalize abundance values
     abundances = np.array(abundances) / np.sum(abundances)
@@ -54,6 +55,8 @@ def dist_custom(centroids, Pe, Pf, radius, structures, abundances, gt_uncertaint
     if len(structures) != len(abundances):
         raise ValueError("Number of structures and abundances must match.")
 
+    emitter_index = 0  # Unique index for each emitter
+
     for centroid in centroids:
         # Select structure based on abundances
         structure_idx = np.random.choice(len(structures), p=abundances)
@@ -63,25 +66,36 @@ def dist_custom(centroids, Pe, Pf, radius, structures, abundances, gt_uncertaint
         rotation_matrix = np.array([[np.cos(angle), -np.sin(angle)],
                                     [np.sin(angle), np.cos(angle)]])
 
-        rotated_structure = (structure@rotation_matrix.T) + centroid
+        rotated_structure = (structure @ rotation_matrix.T) + centroid
+
+        emitter_indices = []  # Track indices of emitters in this structure
 
         # Process the points of the selected structure
         for point in rotated_structure:
-            corrected_point = np.random.normal(loc=point, scale=gt_uncertainty) # Implement gt uncertainty
+            corrected_point = np.random.normal(loc=point, scale=gt_uncertainty)  # Implement gt uncertainty
             if np.random.binomial(1, Pe):  # Biolabelling check
                 labelled_emitters.append(corrected_point)
+                emitter_indices.append(emitter_index)  # Store index
+                emitter_index += 1
+
                 measurements = generate_measurements(corrected_point, poisson_mean=measured,
                                                      uncertainty_std=ms_uncertainty*radius)
                 for measurement in measurements:
                     if np.random.binomial(1, Pf):  # Signal received check
                         observed.append(measurement)
-                    else:
-                        continue
+
             else:
                 unlabelled_emitters.append(corrected_point)
+                emitter_indices.append(emitter_index)
+                emitter_index += 1
+
+        # Fully connect all emitters in this structure
+        for i in range(len(emitter_indices)):
+            for j in range(i + 1, len(emitter_indices)):  # Avoid self-loops
+                edges.append((emitter_indices[i], emitter_indices[j]))
 
     return (np.array(labelled_emitters), np.array(unlabelled_emitters),
-            np.array(observed))
+            np.array(observed), edges)
 
 
 
