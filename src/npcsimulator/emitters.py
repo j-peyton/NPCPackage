@@ -1,4 +1,5 @@
 import numpy as np
+import h5py
 
 def generate_measurements(emitter_position, poisson_mean, uncertainty_std):
     """
@@ -23,29 +24,56 @@ def generate_measurements(emitter_position, poisson_mean, uncertainty_std):
     return np.array(new_emits)
 
 
+def gen_noise(xrange, yrange, rho, measured=5, ms_uncertainty=0.5):
+    n_noise_emitters = np.random.poisson(rho)
+    x_noise = np.random.uniform(xrange[0], xrange[1], n_noise_emitters)
+    y_noise = np.random.uniform(yrange[0], yrange[1], n_noise_emitters)
+    noise = np.column_stack((x_noise, y_noise))
+    clutter = []
+    for point in noise:
+        measurements = generate_measurements(point, poisson_mean=measured, uncertainty_std=ms_uncertainty)
+        for measurement in measurements:
+            clutter.append((measurement[0], measurement[1], 0))  # ID is always 0 for clutter
+    return np.array(clutter)
 
-def dist_custom(centroids, Pe, Pf, radius, structures, abundances, gt_uncertainty=0,
-                measured=7, ms_uncertainty=0.05):
+
+def convert_3d(array_list, membrane_function):
     """
-    Distributes emitters with user-provided structures and records emitter adjacency information.
+    Converts a list of 2D arrays into 3D using the membrane function input.
 
-    :param centroids: List of centroid coordinates.
-    :param Pe: Probability of emitter presence.
-    :param Pf: Probability of fluorescence / signal received.
-    :param radius: Radius of the centroid/emitter structures, enforces hard-core distance.
-    :param structures: List of Numpy arrays representing structures ([structure1, structure2, ...]).
-    :param abundances: List of abundances for each structure ([0.8, 0.2, ...]).
-    :param gt_uncertainty: Uncertainty of ground truth emitters.
-    :param measured: Poisson mean of the number of measurements per emitter.
-    :param ms_uncertainty: Uncertainty of measurements around an emitter as a percentage of the radius.
+    :param array_list: List of Nx2 2D arrays.
+    :param membrane_function: Cell membrane function used to generate the z-coordinates.
 
-    :return: Numpy arrays of labelled emitters, unlabelled emitters, measurements, and adjacency list.
+    :return: List of Nx3 3D arrays.
     """
-    labelled_emitters, unlabelled_emitters = [], []
-    observed = []
-    edges = []  # Store emitter adjacency pairs
+    arrays_3d = []
 
-    # Normalize abundance values
+    for array in array_list:
+        # Ensure that the array is 2D with shape (N, 2), if not, raise an error
+        if array.ndim == 1:
+            array = array.reshape(-1, 2)  # Reshape 1D to 2D (e.g., [x, y] -> [[x, y]])
+        elif array.shape[1] != 2:
+            raise ValueError("Input arrays must have shape (N, 2) for x and y coordinates.")
+
+        # Extract the x and y coordinates
+        x_coords, y_coords = array[:, 0], array[:, 1]
+
+        # Generate the z-coordinates using the membrane function
+        z_coords = membrane_function(x_coords, y_coords)
+
+        # Stack the x, y, z coordinates into a 3D array
+        array_3d = np.column_stack((array, z_coords))
+        arrays_3d.append(array_3d)
+
+    return arrays_3d
+
+
+
+def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_uncertainty=0,
+                measured=7, ms_uncertainty=0.05, noise_params=None):
+    observed, edges, emitter_data = [], [], []
+    emitter_index = 1
+
     abundances = np.array(abundances) / np.sum(abundances)
 
     if not structures or len(structures) == 0:
@@ -55,74 +83,57 @@ def dist_custom(centroids, Pe, Pf, radius, structures, abundances, gt_uncertaint
     if len(structures) != len(abundances):
         raise ValueError("Number of structures and abundances must match.")
 
-    emitter_index = 0  # Unique index for each emitter
-
     for centroid in centroids:
-        # Select structure based on abundances
         structure_idx = np.random.choice(len(structures), p=abundances)
         structure = radius * structures[structure_idx]
 
-        angle = np.random.uniform(0, 2*np.pi)
+        angle = np.random.uniform(0, 2 * np.pi)
         rotation_matrix = np.array([[np.cos(angle), -np.sin(angle)],
                                     [np.sin(angle), np.cos(angle)]])
 
         rotated_structure = (structure @ rotation_matrix.T) + centroid
+        emitter_indices = []
 
-        emitter_indices = []  # Track indices of emitters in this structure
-
-        # Process the points of the selected structure
         for point in rotated_structure:
-            corrected_point = np.random.normal(loc=point, scale=gt_uncertainty)  # Implement gt uncertainty
-            if np.random.binomial(1, Pe):  # Biolabelling check
-                labelled_emitters.append(corrected_point)
-                emitter_indices.append(emitter_index)  # Store index
-                emitter_index += 1
+            corrected_point = np.random.normal(loc=point, scale=gt_uncertainty)
+            emitter_type = "labelled" if np.random.binomial(1, p) else "unlabelled"
 
+            emitter_data.append((emitter_index, corrected_point[0], corrected_point[1], emitter_type))
+            emitter_indices.append(emitter_index)
+            emitter_index += 1
+
+            if emitter_type == "labelled":
                 measurements = generate_measurements(corrected_point, poisson_mean=measured,
-                                                     uncertainty_std=ms_uncertainty*radius)
+                                                     uncertainty_std=ms_uncertainty * radius)
                 for measurement in measurements:
-                    if np.random.binomial(1, Pf):  # Signal received check
-                        observed.append(measurement)
+                    if np.random.binomial(1, q):
+                        observed.append((measurement[0], measurement[1], emitter_indices[-1]))
 
-            else:
-                unlabelled_emitters.append(corrected_point)
-                emitter_indices.append(emitter_index)
-                emitter_index += 1
-
-        # Fully connect all emitters in this structure
         for i in range(len(emitter_indices)):
-            for j in range(i + 1, len(emitter_indices)):  # Avoid self-loops
+            for j in range(i + 1, len(emitter_indices)):
                 edges.append((emitter_indices[i], emitter_indices[j]))
 
-    return (np.array(labelled_emitters), np.array(unlabelled_emitters),
-            np.array(observed), edges)
+    clutter_data = []
+    if noise_params:
+        xrange, yrange, rho= noise_params
+        clutter_data = gen_noise(xrange, yrange, rho, measured, ms_uncertainty)
+        observed.extend(clutter_data)
 
+    # Save data to HDF5 file
+    with h5py.File(filename, 'w') as hf:
+        emitter_group = hf.create_group('emitter')
+        emitter_group.create_dataset('id', data=np.array([e[0] for e in emitter_data], dtype=np.int32))
+        emitter_group.create_dataset('position', data=np.array([[e[1], e[2]] for e in emitter_data]))
+        emitter_group.create_dataset('type', data=np.array([e[3] for e in emitter_data], dtype='S'))
 
+        if observed:
+            observed_group = hf.create_group('observed')
+            observed_group.create_dataset('position', data=np.array([[o[0], o[1]] for o in observed]))
+            observed_group.create_dataset('emitter_id', data=np.array([o[2] for o in observed], dtype=np.int32))
 
-def gen_noise(xrange, yrange, rho, measured=5, ms_uncertainty=0.5):
-    """
-    Generates random noise emitters across the specified window area (2D or 3D).
+        clutter_group = hf.create_group('clutter')
+        clutter_group.create_dataset('position', data=np.array([[c[0], c[1]] for c in clutter_data]))
+        clutter_group.create_dataset('emitter_id', data=np.array([c[2] for c in clutter_data], dtype=np.int32))
+        clutter_group.create_dataset('type', data=np.array(['clutter'] * len(clutter_data), dtype='S'))
 
-    :param xrange: Tuple specifying the (min, max) x-coordinate bounds for the window.
-    :param yrange: Tuple specifying the (min, max) y-coordinate bounds for the window.
-    :param rho: Poisson mean of number of noise clusters to be generated.
-    :param measured: Poisson mean of number of measurements around noise emitter.
-    :param ms_uncertainty: Uncertainty of measurement position around the noise emitter.
-
-    :return: Array of noise emitter coordinates (2D or 3D).
-    """
-    n_noise_emitters = np.random.poisson(rho)
-
-    # Generate the 2D noise for x and y coordinates
-    x_noise = np.random.uniform(xrange[0], xrange[1], n_noise_emitters)
-    y_noise = np.random.uniform(yrange[0], yrange[1], n_noise_emitters)
-
-    # If a membrane function is provided, make noise 3D
-    noise = np.column_stack((x_noise, y_noise))
-    clutter = []
-    for point in noise:
-        measurements = generate_measurements(point, poisson_mean=measured, uncertainty_std=ms_uncertainty)
-        for measurement in measurements:
-            clutter.append(measurement)
-
-    return np.array(clutter)
+        hf.create_dataset('edges', data=np.array(edges, dtype=np.int32))
