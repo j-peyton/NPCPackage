@@ -33,7 +33,7 @@ def gen_noise(xrange, yrange, rho, measured=5, ms_uncertainty=0.5):
     for point in noise:
         measurements = generate_measurements(point, poisson_mean=measured, uncertainty_std=ms_uncertainty)
         for measurement in measurements:
-            clutter.append((measurement[0], measurement[1], 0))  # ID is always 0 for clutter
+            clutter.append((measurement[0], measurement[1], -1))  # ID is always -1 for clutter
     return np.array(clutter)
 
 
@@ -72,7 +72,7 @@ def convert_3d(array_list, membrane_function):
 def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_uncertainty=0,
                 measured=7, ms_uncertainty=0.05, noise_params=None):
     observed, edges, emitter_data = [], [], []
-    emitter_index = 1
+    emitter_index = 0
 
     abundances = np.array(abundances) / np.sum(abundances)
 
