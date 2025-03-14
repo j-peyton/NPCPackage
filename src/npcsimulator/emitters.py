@@ -126,18 +126,11 @@ def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_un
 
     emitter_pos, observed_pos, clutter_pos = data_dict.values()
 
-    print("Data Types Before Saving:")
-    print("Emitter Data:", type(emitter_pos), "Length:", len(emitter_pos))
-    print("Observed Data:", type(observed_pos), "Length:", len(observed_pos))
-    print("Clutter Data:", type(clutter_pos), "Length:", len(clutter_pos))
+    print("Data Before Saving:")
+    print("Emitter Data:", type(emitter_pos), "Shape:", emitter_pos.shape)
+    print("Observed Data:", type(observed_pos), "Shape:", observed_pos.shape)
+    print("Clutter Data:", type(clutter_pos), "Shape:", clutter_pos.shape)
     print("Edges:", type(edges), "Length:", len(edges))
-
-
-    print("Emitter Position Shape:", emitter_pos.shape)
-
-    print("Observed Position Shape:", observed_pos.shape)
-
-    print("Clutter Position Shape:", clutter_pos.shape)
 
     # Save data to HDF5 file
     with h5py.File(filename, 'w') as hf:
