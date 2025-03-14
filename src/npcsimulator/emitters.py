@@ -5,11 +5,11 @@ def generate_measurements(emitter_position, poisson_mean, uncertainty_std):
     """
     Generates repeated measurements for each emitter, with uncertainty, optionally applying a membrane function.
 
-    :param emitter_position: Numpy array of the emitter's true positions (N x 2 or N x 3).
-    :param poisson_mean: Mean of the Poisson distribution for the number of measurements.
-    :param uncertainty_std: Standard deviation of the Gaussian uncertainty.
+    :param emitter_position: (ndarray) Emitter's true positions (N x 2 or N x 3).
+    :param poisson_mean: (int) Poisson mean of the number of measurements around the emitter.
+    :param uncertainty_std: (num) Standard deviation of the Gaussian uncertainty of the measurements.
 
-    :return: Numpy array of repeated measurements (M x 2 or M x 3).
+    :return: (ndarray) Positional data of repeated measurements (M x 2 or M x 3).
     """
     emitter_position = np.atleast_2d(emitter_position)  # Ensure input is at least 2D
     new_emits = []
@@ -25,6 +25,17 @@ def generate_measurements(emitter_position, poisson_mean, uncertainty_std):
 
 
 def gen_noise(xrange, yrange, rho, measured=5, ms_uncertainty=0.5):
+    """
+    Generate clutter / spurious measurements across a window.
+
+    :param xrange: (tuple) Specifies xrange of window.
+    :param yrange: (tuple) Specifies yrange of window.
+    :param rho: (num) Noise density; dictates number of clusters of spurious measurements.
+    :param measured: (int) Poisson mean of measurements assigned to each cluster.
+    :param ms_uncertainty: (num) Uncertainty of measurements around the dictated point.
+
+    :return: (ndarray) Positional data of spurious measurements across the window.
+    """
     n_noise_emitters = np.random.poisson(rho)
     x_noise = np.random.uniform(xrange[0], xrange[1], n_noise_emitters)
     y_noise = np.random.uniform(yrange[0], yrange[1], n_noise_emitters)
@@ -49,20 +60,43 @@ def apply_membrane(data, membrane_function):
     data = np.atleast_2d(data)  # Ensure 2D format
 
     if membrane_function:
-        x, y = data[:, 0], data[:, 1]  # Extract columns properly
+        x, y = data[:, 0], data[:, 1]
         z = np.array(membrane_function(x, y))  # Ensure output is an array of the same length
         if z.shape[0] != data.shape[0]:  # Ensure shape consistency
             raise ValueError(
                 f"Membrane function output shape {z.shape} does not match input data shape {data.shape[0]}")
     else:
-        z = np.zeros(data.shape[0])  # Default to zero height
+        z = np.zeros(data.shape[0])  # Default to z=0 for all
 
-    return np.column_stack((data, z))  # Stack x, y, and z properly
+    return np.column_stack((data, z))
 
 
 
 def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_uncertainty=0,
                 measured=7, ms_uncertainty=0.05, noise_params=None, membrane_function=None):
+    """
+    Distributes emitters around centroids, and measurements around these emitters. Generates clutter/spurious
+    measurements. Converts emitters, measurements, and clutter to 3D, mimicking a cell membrane. Fully connects emitters
+    around the same centroid. Saves emitters, measurements, clutter, and edges to HDF5.
+
+    :param filename: (str) Name of the saved HDF5 file.
+    :param centroids: (ndarray) Centroids that dictate structure location.
+    :param p: (num) Probability of effective biolabelling.
+    :param q: (num) Probability of detecting a signal from a measurement.
+    :param radius: (num) Radius of the structure. Keep consistent with radius at centroid generation stage.
+    :param structures: (list) Structures to be distributed. Result of structure parsing.
+    :param abundances: (ndarray) Relative abundances of each structures presence. Result of structure parsing.
+    :param gt_uncertainty: (num) Gaussian uncertainty of ground truth positioning.
+    :param measured: (int) Poisson mean of measurements around labelled emitters.
+    :param ms_uncertainty: (num) Uncertainty of measurement positioning as a function of the radius of the structure.
+    :param noise_params: (tuple) Parameters to generate noise. Form (xrange, yrange, noise_density). Default None.
+    :param membrane_function: (func) Function to convert 2D generated data to 3D. Default z=0 in absence of function.
+
+    :return:{ (h5) File containing emitters, measurements, clutter, and edges fully connecting structures. Stored in HDF5
+    format; emitters have type b'labelled' or b'unlabelled', measurements are linked with parent emitters via emitter
+    ID's, and distinct structures are fully connected via edges defined in terms of emitter ID's. All clutter has an
+    emitter ID of -1, and type b'clutter'.}
+    """
     observed_data, edges, emitter_data = [], [], []
     emitter_index = 0
 
@@ -101,14 +135,16 @@ def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_un
                     if np.random.binomial(1, q):
                         observed_data.append((measurement[0], measurement[1], emitter_indices[-1]))
 
+        # Store fully connected edges in structures for ground truth graphing
         for i in range(len(emitter_indices)):
             for j in range(i + 1, len(emitter_indices)):
                 edges.append((emitter_indices[i], emitter_indices[j]))
 
+    # Generate clutter data
     clutter_data = []
     if noise_params:
         xrange, yrange, rho= noise_params
-        clutter_data = gen_noise(xrange, yrange, rho, measured, ms_uncertainty)
+        clutter_data = gen_noise(xrange, yrange, rho, measured, ms_uncertainty*radius)
 
     # Create emitter_pos, observed_pos, clutter_pos arrays for easier 3d processing
     emitter_pos = np.array([[e[0], e[1]] for e in emitter_data])
