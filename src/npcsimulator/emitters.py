@@ -41,15 +41,23 @@ def apply_membrane(data, membrane_function):
     """
     Applies the membrane function or adds a z=0 coordinate at the dataset level.
 
-    :param data: 2D input data for membrane conversion. Please use arrays.
+    :param data: 2D input data for membrane conversion. Should be an Nx2 array.
     :param membrane_function: Function that dictates the axial values. If not present, all zeros.
 
-    :return: Column stacked 2D input data and calculated axial values.
+    :return: Nx3 array with an additional z-coordinate.
     """
+    data = np.atleast_2d(data)  # Ensure 2D format
+
     if membrane_function:
-        return np.array([membrane_function(point) for point in data])
+        x, y = data[:, 0], data[:, 1]  # Extract columns properly
+        z = np.array(membrane_function(x, y))  # Ensure output is an array of the same length
+        if z.shape[0] != data.shape[0]:  # Ensure shape consistency
+            raise ValueError(
+                f"Membrane function output shape {z.shape} does not match input data shape {data.shape[0]}")
     else:
-        return np.column_stack((data, np.zeros(len(data))))
+        z = np.zeros(data.shape[0])  # Default to zero height
+
+    return np.column_stack((data, z))  # Stack x, y, and z properly
 
 
 
@@ -113,8 +121,8 @@ def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_un
         "clutter_pos": clutter_pos
     }
 
-    for key in data_dict:
-        data_dict[key] = apply_membrane(data_dict[key], membrane_function)
+    for key, data in data_dict.items():
+        data_dict[key] = apply_membrane(data, membrane_function)
 
     emitter_pos, observed_pos, clutter_pos = data_dict.values()
 
@@ -135,16 +143,16 @@ def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_un
     with h5py.File(filename, 'w') as hf:
         emitter_group = hf.create_group('emitter')
         emitter_group.create_dataset('id', data=np.array([e[2] for e in emitter_data], dtype=np.int32))
-        emitter_group.create_dataset('position', data=np.array([[e[0], e[1]] for e in emitter_data]))
+        emitter_group.create_dataset('position', data=np.array([[e[0], e[1], e[2]] for e in emitter_pos]))
         emitter_group.create_dataset('type', data=np.array([e[3] for e in emitter_data], dtype='S'))
 
         if observed_data:
             observed_group = hf.create_group('observed')
-            observed_group.create_dataset('position', data=np.array([[o[0], o[1]] for o in observed_data]))
+            observed_group.create_dataset('position', data=np.array([[o[0], o[1], o[2]] for o in observed_pos]))
             observed_group.create_dataset('emitter_id', data=np.array([o[2] for o in observed_data], dtype=np.int32))
 
         clutter_group = hf.create_group('clutter')
-        clutter_group.create_dataset('position', data=np.array([[c[0], c[1]] for c in clutter_data]))
+        clutter_group.create_dataset('position', data=np.array([[c[0], c[1], c[2]] for c in clutter_pos]))
         clutter_group.create_dataset('emitter_id', data=np.array([c[2] for c in clutter_data], dtype=np.int32))
         clutter_group.create_dataset('type', data=np.array(['clutter'] * len(clutter_data), dtype='S'))
 
