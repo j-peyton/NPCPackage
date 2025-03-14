@@ -37,37 +37,6 @@ def gen_noise(xrange, yrange, rho, measured=5, ms_uncertainty=0.5):
     return np.array(clutter)
 
 
-def convert_3d(array_list, membrane_function):
-    """
-    Converts a list of 2D arrays into 3D using the membrane function input.
-
-    :param array_list: List of Nx2 2D arrays.
-    :param membrane_function: Cell membrane function used to generate the z-coordinates.
-
-    :return: List of Nx3 3D arrays.
-    """
-    arrays_3d = []
-
-    for array in array_list:
-        # Ensure that the array is 2D with shape (N, 2), if not, raise an error
-        if array.ndim == 1:
-            array = array.reshape(-1, 2)  # Reshape 1D to 2D (e.g., [x, y] -> [[x, y]])
-        elif array.shape[1] != 2:
-            raise ValueError("Input arrays must have shape (N, 2) for x and y coordinates.")
-
-        # Extract the x and y coordinates
-        x_coords, y_coords = array[:, 0], array[:, 1]
-
-        # Generate the z-coordinates using the membrane function
-        z_coords = membrane_function(x_coords, y_coords)
-
-        # Stack the x, y, z coordinates into a 3D array
-        array_3d = np.column_stack((array, z_coords))
-        arrays_3d.append(array_3d)
-
-    return arrays_3d
-
-
 
 def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_uncertainty=0,
                 measured=7, ms_uncertainty=0.05, noise_params=None):
@@ -98,7 +67,7 @@ def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_un
             corrected_point = np.random.normal(loc=point, scale=gt_uncertainty)
             emitter_type = "labelled" if np.random.binomial(1, p) else "unlabelled"
 
-            emitter_data.append((emitter_index, corrected_point[0], corrected_point[1], emitter_type))
+            emitter_data.append((corrected_point[0], corrected_point[1], emitter_index, emitter_type))
             emitter_indices.append(emitter_index)
             emitter_index += 1
 
@@ -117,13 +86,25 @@ def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_un
     if noise_params:
         xrange, yrange, rho= noise_params
         clutter_data = gen_noise(xrange, yrange, rho, measured, ms_uncertainty)
-        observed.extend(clutter_data)
+
+    print("Data Types Before Saving:")
+    print("Emitter Data:", type(emitter_data), "Length:", len(emitter_data))
+    print("Observed Data:", type(observed), "Length:", len(observed))
+    print("Clutter Data:", type(clutter_data), "Length:", len(clutter_data))
+    print("Edges:", type(edges), "Length:", len(edges))
+
+
+    print("Emitter Position Shape:", np.array([e[:-1] for e in emitter_data]).shape)
+
+    print("Observed Position Shape:", np.array([o[:-1] for o in observed]).shape)
+
+    print("Clutter Position Shape:", np.array([c[:-1] for c in clutter_data]).shape)
 
     # Save data to HDF5 file
     with h5py.File(filename, 'w') as hf:
         emitter_group = hf.create_group('emitter')
-        emitter_group.create_dataset('id', data=np.array([e[0] for e in emitter_data], dtype=np.int32))
-        emitter_group.create_dataset('position', data=np.array([[e[1], e[2]] for e in emitter_data]))
+        emitter_group.create_dataset('id', data=np.array([e[2] for e in emitter_data], dtype=np.int32))
+        emitter_group.create_dataset('position', data=np.array([[e[0], e[1]] for e in emitter_data]))
         emitter_group.create_dataset('type', data=np.array([e[3] for e in emitter_data], dtype='S'))
 
         if observed:
