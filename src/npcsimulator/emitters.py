@@ -37,6 +37,21 @@ def gen_noise(xrange, yrange, rho, measured=5, ms_uncertainty=0.5):
     return np.array(clutter)
 
 
+def apply_membrane(data, membrane_function):
+    """
+    Applies the membrane function or adds a z=0 coordinate at the dataset level.
+
+    :param data: 2D input data for membrane conversion. Please use arrays.
+    :param membrane_function: Function that dictates the axial values. If not present, all zeros.
+
+    :return: Column stacked 2D input data and calculated axial values.
+    """
+    if membrane_function:
+        return np.array([membrane_function(point) for point in data])
+    else:
+        return np.column_stack((data, np.zeros(len(data))))
+
+
 
 def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_uncertainty=0,
                 measured=7, ms_uncertainty=0.05, noise_params=None, membrane_function=None):
