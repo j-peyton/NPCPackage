@@ -102,22 +102,34 @@ def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_un
         xrange, yrange, rho= noise_params
         clutter_data = gen_noise(xrange, yrange, rho, measured, ms_uncertainty)
 
-    # Create emitter_pos, observed_pos arrays for easier 3d processing
+    # Create emitter_pos, observed_pos, clutter_pos arrays for easier 3d processing
     emitter_pos = np.array([[e[0], e[1]] for e in emitter_data])
     observed_pos = np.array([[o[0], o[1]]for o in observed_data])
+    clutter_pos = np.array([[c[0], c[1]] for c in clutter_data])
+
+    data_dict = {
+        "emitter_pos": emitter_pos,
+        "observed_pos": observed_pos,
+        "clutter_pos": clutter_pos
+    }
+
+    for key in data_dict:
+        data_dict[key] = apply_membrane(data_dict[key], membrane_function)
+
+    emitter_pos, observed_pos, clutter_pos = data_dict.values()
 
     print("Data Types Before Saving:")
     print("Emitter Data:", type(emitter_pos), "Length:", len(emitter_pos))
     print("Observed Data:", type(observed_pos), "Length:", len(observed_pos))
-    print("Clutter Data:", type(clutter_data), "Length:", len(clutter_data))
+    print("Clutter Data:", type(clutter_pos), "Length:", len(clutter_pos))
     print("Edges:", type(edges), "Length:", len(edges))
 
 
-    print("Emitter Position Shape:", np.array([e[:-1] for e in emitter_data]).shape)
+    print("Emitter Position Shape:", emitter_pos.shape)
 
-    print("Observed Position Shape:", np.array([o[:-1] for o in observed_data]).shape)
+    print("Observed Position Shape:", observed_pos.shape)
 
-    print("Clutter Position Shape:", np.array([c[:-1] for c in clutter_data]).shape)
+    print("Clutter Position Shape:", clutter_pos.shape)
 
     # Save data to HDF5 file
     with h5py.File(filename, 'w') as hf:
