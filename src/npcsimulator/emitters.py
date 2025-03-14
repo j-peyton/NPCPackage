@@ -87,9 +87,13 @@ def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_un
         xrange, yrange, rho= noise_params
         clutter_data = gen_noise(xrange, yrange, rho, measured, ms_uncertainty)
 
+    # Create emitter_pos, observed_pos arrays for easier 3d processing
+    emitter_pos = np.array([[e[0], e[1]] for e in emitter_data])
+    observed_pos = np.array([[o[0], o[1]]for o in observed_data])
+
     print("Data Types Before Saving:")
-    print("Emitter Data:", type(emitter_data), "Length:", len(emitter_data))
-    print("Observed Data:", type(observed_data), "Length:", len(observed_data))
+    print("Emitter Data:", type(emitter_pos), "Length:", len(emitter_pos))
+    print("Observed Data:", type(observed_pos), "Length:", len(observed_pos))
     print("Clutter Data:", type(clutter_data), "Length:", len(clutter_data))
     print("Edges:", type(edges), "Length:", len(edges))
 
