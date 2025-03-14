@@ -39,8 +39,8 @@ def gen_noise(xrange, yrange, rho, measured=5, ms_uncertainty=0.5):
 
 
 def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_uncertainty=0,
-                measured=7, ms_uncertainty=0.05, noise_params=None):
-    observed, edges, emitter_data = [], [], []
+                measured=7, ms_uncertainty=0.05, noise_params=None, membrane_function=None):
+    observed_data, edges, emitter_data = [], [], []
     emitter_index = 0
 
     abundances = np.array(abundances) / np.sum(abundances)
@@ -76,7 +76,7 @@ def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_un
                                                      uncertainty_std=ms_uncertainty * radius)
                 for measurement in measurements:
                     if np.random.binomial(1, q):
-                        observed.append((measurement[0], measurement[1], emitter_indices[-1]))
+                        observed_data.append((measurement[0], measurement[1], emitter_indices[-1]))
 
         for i in range(len(emitter_indices)):
             for j in range(i + 1, len(emitter_indices)):
@@ -89,14 +89,14 @@ def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_un
 
     print("Data Types Before Saving:")
     print("Emitter Data:", type(emitter_data), "Length:", len(emitter_data))
-    print("Observed Data:", type(observed), "Length:", len(observed))
+    print("Observed Data:", type(observed_data), "Length:", len(observed_data))
     print("Clutter Data:", type(clutter_data), "Length:", len(clutter_data))
     print("Edges:", type(edges), "Length:", len(edges))
 
 
     print("Emitter Position Shape:", np.array([e[:-1] for e in emitter_data]).shape)
 
-    print("Observed Position Shape:", np.array([o[:-1] for o in observed]).shape)
+    print("Observed Position Shape:", np.array([o[:-1] for o in observed_data]).shape)
 
     print("Clutter Position Shape:", np.array([c[:-1] for c in clutter_data]).shape)
 
@@ -107,10 +107,10 @@ def dist_custom(filename, centroids, p, q, radius, structures, abundances, gt_un
         emitter_group.create_dataset('position', data=np.array([[e[0], e[1]] for e in emitter_data]))
         emitter_group.create_dataset('type', data=np.array([e[3] for e in emitter_data], dtype='S'))
 
-        if observed:
+        if observed_data:
             observed_group = hf.create_group('observed')
-            observed_group.create_dataset('position', data=np.array([[o[0], o[1]] for o in observed]))
-            observed_group.create_dataset('emitter_id', data=np.array([o[2] for o in observed], dtype=np.int32))
+            observed_group.create_dataset('position', data=np.array([[o[0], o[1]] for o in observed_data]))
+            observed_group.create_dataset('emitter_id', data=np.array([o[2] for o in observed_data], dtype=np.int32))
 
         clutter_group = hf.create_group('clutter')
         clutter_group.create_dataset('position', data=np.array([[c[0], c[1]] for c in clutter_data]))
