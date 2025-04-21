@@ -33,3 +33,6 @@ src/*.egg-info/
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+
+*venv*/
+release.sh
